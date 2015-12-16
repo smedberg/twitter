@@ -34,6 +34,40 @@ describe Twitter::REST::Request do
         expect(HTTP).to receive(:via).with('127.0.0.1', 3328).twice.and_call_original
         @client.update_with_media('Update', fixture('pbjt.gif'))
       end
+
+      context 'when using global timeout' do
+        it 'passes timeout options to HTTP' do
+          stub_post('/1.1/statuses/update.json').with(body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
+          expect(HTTP).to receive(:via).with('127.0.0.1', 3328).and_return(HTTP)
+          expect(HTTP).to receive(:timeout).with(:global, connect: 1, read: 2, write: 3).and_call_original
+          @client.update('Update', global_timeout: {connect: 1, read: 2, write: 3})
+        end
+      end
+
+      context 'when using per-operation timeout' do
+        it 'passes timeout options to HTTP' do
+          stub_post('/1.1/statuses/update.json').with(body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
+          expect(HTTP).to receive(:via).with('127.0.0.1', 3328).and_return(HTTP)
+          expect(HTTP).to receive(:timeout).with(:per_operation, connect: 3, read: 2, write: 1).and_call_original
+          @client.update('Update', per_operation_timeout: {connect: 3, read: 2, write: 1})
+        end
+      end
+    end
+
+    context 'when using global timeout' do
+      it 'passes timeout options to HTTP' do
+        stub_post('/1.1/statuses/update.json').with(body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
+        expect(HTTP).to receive(:timeout).with(:global, connect: 1, read: 2, write: 3).and_call_original
+        @client.update('Update', global_timeout: {connect: 1, read: 2, write: 3})
+      end
+    end
+
+    context 'when using per-operation timeout' do
+      it 'passes timeout options to HTTP' do
+        stub_post('/1.1/statuses/update.json').with(body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
+        expect(HTTP).to receive(:timeout).with(:per_operation, connect: 3, read: 2, write: 1).and_call_original
+        @client.update('Update', per_operation_timeout: {connect: 3, read: 2, write: 1})
+      end
     end
   end
 end

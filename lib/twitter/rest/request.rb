@@ -14,7 +14,8 @@ module Twitter
       include Twitter::Utils
       BASE_URL = 'https://api.twitter.com'
       attr_accessor :client, :headers, :options, :path, :rate_limit,
-                    :request_method, :uri
+                    :request_method, :global_timeout_options,
+                    :per_operation_timeout_options, :uri
       alias_method :verb, :request_method
 
       # @param client [Twitter::Client]
@@ -26,6 +27,7 @@ module Twitter
         @client = client
         @uri = Addressable::URI.parse(path.start_with?('http') ? path : BASE_URL + path)
         set_multipart_options!(request_method, options)
+        timeout_options!(options)
         @path = uri.path
         @options = options
       end
@@ -52,6 +54,11 @@ module Twitter
           @request_method = request_method
           @headers = Twitter::Headers.new(@client, @request_method, @uri, options).request_headers
         end
+      end
+
+      def timeout_options!(options)
+        @global_timeout_options = options.delete(:global_timeout)
+        @per_operation_timeout_options = options.delete(:per_operation_timeout)
       end
 
       def mime_type(basename)
@@ -108,7 +115,14 @@ module Twitter
 
       # @return [HTTP::Client, HTTP]
       def http_client
-        @client.proxy ? HTTP.via(*proxy) : HTTP
+        client_with_timeout(@client.proxy ? HTTP.via(*proxy) : HTTP)
+      end
+
+      # @return [HTTP::Client, HTTP]
+      def client_with_timeout(http_client)
+        return http_client.timeout(:per_operation, per_operation_timeout_options) if per_operation_timeout_options
+        return http_client.timeout(:global, global_timeout_options) if global_timeout_options
+        http_client
       end
 
       # Return proxy values as a compacted array
