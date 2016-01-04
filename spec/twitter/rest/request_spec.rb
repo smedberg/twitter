@@ -60,12 +60,30 @@ describe Twitter::REST::Request do
         expect(HTTP).to receive(:timeout).with(:global, connect: 1, read: 2, write: 3).and_call_original
         @client.update('Update', global_timeout: {connect: 1, read: 2, write: 3})
       end
+
+      it 'does not pass timeout info to Twitter::Headers' do
+        headers = {test: 'result'}
+        headers_stub = double('headers')
+        allow(headers_stub).to receive_messages(request_headers: headers)
+        expect(Twitter::Headers).to receive(:new).with(@client, :post, Addressable::URI.new(scheme: 'https', host: 'api.twitter.com', path: '/1.1/statuses/update.json'), status: 'Update').and_return(headers_stub)
+        stub_post('/1.1/statuses/update.json').with(headers: headers, body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
+        @client.update('Update', global_timeout: {connect: 1, read: 2, write: 3})
+      end
     end
 
     context 'when using per-operation timeout' do
       it 'passes timeout options to HTTP' do
         stub_post('/1.1/statuses/update.json').with(body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
         expect(HTTP).to receive(:timeout).with(:per_operation, connect: 3, read: 2, write: 1).and_call_original
+        @client.update('Update', per_operation_timeout: {connect: 3, read: 2, write: 1})
+      end
+
+      it 'does not pass timeout info to Twitter::Headers' do
+        headers = {test: 'result'}
+        headers_stub = double('headers')
+        allow(headers_stub).to receive_messages(request_headers: headers)
+        expect(Twitter::Headers).to receive(:new).with(@client, :post, Addressable::URI.new(scheme: 'https', host: 'api.twitter.com', path: '/1.1/statuses/update.json'), status: 'Update').and_return(headers_stub)
+        stub_post('/1.1/statuses/update.json').with(headers: headers, body: {status: 'Update'}).to_return(body: fixture('status.json'), headers: {content_type: 'application/json; charset=utf-8'})
         @client.update('Update', per_operation_timeout: {connect: 3, read: 2, write: 1})
       end
     end
