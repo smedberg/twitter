@@ -26,8 +26,8 @@ module Twitter
       def initialize(client, request_method, path, options = {})
         @client = client
         @uri = Addressable::URI.parse(path.start_with?('http') ? path : BASE_URL + path)
-        set_multipart_options!(request_method, options)
         timeout_options!(options)
+        set_multipart_options!(request_method, options)
         @path = uri.path
         @options = options
       end
