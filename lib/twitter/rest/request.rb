@@ -23,14 +23,24 @@ module Twitter
         @request_method = request_method.to_sym
         @path = path
         @uri = Addressable::URI.parse(client.connection.url_prefix + path)
+        set_timeout_options!(options)
         @options = options
+      end
+
+      def set_timeout_options!(options)
+        @timeout = options.delete(:timeout)
+        @open_timeout = options.delete(:open_timeout)
       end
 
       # @return [Array, Hash]
       def perform
         @headers = Twitter::Headers.new(@client, @request_method, @uri.to_s, @options).request_headers
         begin
-          response = @client.connection.send(@request_method, @path, @options) { |request| request.headers.update(@headers) }.env
+          response = @client.connection.send(@request_method, @path, @options) do |request|
+            request.headers.update(@headers)
+            request.options.timeout = @timeout.to_i if @timeout
+            request.options.open_timeout = @open_timeout.to_i if @open_timeout
+          end.env
         rescue Faraday::Error::TimeoutError, Timeout::Error => error
           raise(Twitter::Error::RequestTimeout.new(error))
         rescue Faraday::Error::ClientError, JSON::ParserError => error
