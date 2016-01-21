@@ -33,5 +33,23 @@ describe Twitter::REST::Request do
       allow(@client).to receive(:connection).and_raise(JSON::ParserError.new('unexpected token'))
       expect { @request.perform }.to raise_error(Twitter::Error)
     end
+    it 'does not pass timeout options when they are not supplied' do
+      stub_get('/path').to_return(:body => fixture('status.json'), :headers => {:content_type => 'application/json; charset=utf-8'})
+      Faraday::RequestOptions.any_instance.should_receive(:timeout=).never
+      @request.perform
+    end
+    it 'passes timeout options when they are supplied' do
+      stub_get('/path').to_return(:body => fixture('status.json'), :headers => {:content_type => 'application/json; charset=utf-8'})
+      Faraday::RequestOptions.any_instance.should_receive(:timeout=).with(12)
+      Faraday::RequestOptions.any_instance.should_receive(:open_timeout=).with(56)
+      request = Twitter::REST::Request.new(@client, :get, '/path', timeout: 12.34, open_timeout: 56.78)
+      request.perform
+    end
+    it 'does not pass timeout options to headers' do
+      stub_get('/path').to_return(:body => fixture('status.json'), :headers => {:content_type => 'application/json; charset=utf-8'})
+      expect(Twitter::Headers).to receive(:new).with(@client, :get, 'https://api.twitter.com/path', {}).and_call_original
+      request = Twitter::REST::Request.new(@client, :get, '/path', timeout: 12.34, open_timeout: 56.78)
+      request.perform
+    end
   end
 end
