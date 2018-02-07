@@ -5,6 +5,7 @@ require 'timeout'
 require 'twitter/error'
 require 'twitter/headers'
 require 'twitter/rate_limit'
+require 'channels/log_helper'
 
 module Twitter
   module REST
@@ -12,6 +13,8 @@ module Twitter
       attr_accessor :client, :headers, :options, :rate_limit, :request_method,
                     :path, :uri
       alias_method :verb, :request_method
+
+      include ::Channels::LogHelper
 
       # @param client [Twitter::Client]
       # @param request_method [String, Symbol]
@@ -36,18 +39,23 @@ module Twitter
       def perform
         @headers = Twitter::Headers.new(@client, @request_method, @uri.to_s, @options).request_headers
         begin
-          response = @client.connection.send(@request_method, @path, @options) do |request|
-            request.headers.update(@headers)
-            request.options.timeout = @timeout.to_i if @timeout
-            request.options.open_timeout = @open_timeout.to_i if @open_timeout
-          end.env
+          response = nil
+          duration = Benchmark.ms do
+            response = @client.connection.send(@request_method, @path, @options) do |request|
+              request.headers.update(@headers)
+              request.options.timeout = @timeout.to_i if @timeout
+              request.options.open_timeout = @open_timeout.to_i if @open_timeout
+            end.env
+          end
         rescue Faraday::Error::TimeoutError, Timeout::Error => error
           raise(Twitter::Error::RequestTimeout.new(error))
         rescue Faraday::Error::ClientError, JSON::ParserError => error
           raise(Twitter::Error.new(error))
         end
         @rate_limit = Twitter::RateLimit.new(response.response_headers)
-        response.body
+        body = response.body
+        log("Twitter response body nil. Time taken: #{duration}, Status: #{response.status}, Headers: #{response.response_headers}") if body.nil?
+        body
       end
     end
   end
