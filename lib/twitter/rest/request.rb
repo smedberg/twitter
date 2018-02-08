@@ -54,7 +54,7 @@ module Twitter
         end
         @rate_limit = Twitter::RateLimit.new(response.response_headers)
         body = response.body
-        log("Twitter response body nil. Time taken: #{duration}, Status: #{response.status}, Headers: #{response.response_headers}") if body.nil?
+        log("Twitter response body nil. URI: #{@uri}, Time taken: #{duration}, Status: #{response.status}, Headers: #{response.response_headers}") if body.nil?
         body
       end
     end
